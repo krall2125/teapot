@@ -1,7 +1,6 @@
 package lexer
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"teapot/report"
@@ -22,6 +21,7 @@ const (
 	TT_FLOAT64
 	TT_FLOAT32
 	TT_VOID
+	TT_RETURN
 
 	TT_IDENTIFIER
 
@@ -56,6 +56,7 @@ func TT_ToStr(tt TokenType) string {
 		"TT_FLOAT64",
 		"TT_FLOAT32",
 		"TT_VOID",
+		"TT_RETURN",
 		"TT_IDENTIFIER",
 		"TT_ORP",
 		"TT_CRP",
@@ -73,10 +74,10 @@ func TT_ToStr(tt TokenType) string {
 }
 
 type Token struct {
-	typ TokenType
-	lexeme string
-	line int
-	char int
+	Typ TokenType
+	Lexeme string
+	Line int
+	Char int
 }
 
 var line int = 1
@@ -101,7 +102,11 @@ func is_at_end(iter int, dat []byte) bool {
 func lex_string(iter *int, dat []byte) Token {
 	*iter++
 
-	var lexeme string
+	var token Token
+
+	token.Typ = TT_STR;
+	token.Char = char;
+	token.Line = line;
 
 	for dat[*iter] != '"' {
 		if is_at_end(*iter + 1, dat) {
@@ -109,53 +114,59 @@ func lex_string(iter *int, dat []byte) Token {
 			break
 		}
 
-		lexeme += string(dat[*iter])
+		token.Lexeme += string(dat[*iter])
 		char++;
 		if (dat[*iter] == '\n') {
 			line++;
 			char = 0;
 		}
+
+		*iter++;
 	}
 
-	*iter++
-
-	return Token {typ: TT_STR, lexeme: lexeme, line: line, char: char}
+	return token;
 }
 
 func lex_identifier(iter *int, dat []byte) Token {
 	var token Token
 
+	token.Char = char;
+	token.Line = line;
+
 	for is_alpha(rune(dat[*iter])) && !is_at_end(*iter, dat) {
-		token.lexeme += string(dat[*iter]);
+		token.Lexeme += string(dat[*iter]);
 		*iter++;
 		char++;
 	}
 
-	token.typ = TT_IDENTIFIER;
-	token.line = line;
-	token.char = char;
+	token.Typ = TT_IDENTIFIER;
 
-	switch token.lexeme {
+	*iter--
+	char--
+
+	switch token.Lexeme {
 		case "int":
-			token.typ = TT_INT
+			token.Typ = TT_INT
 		case "string":
-			token.typ = TT_STRING
+			token.Typ = TT_STRING
 		case "any":
-			token.typ = TT_ANY
-		case "anytype":
-			token.typ = TT_ANYTYPE
+			token.Typ = TT_ANY
+		case "anyType":
+			token.Typ = TT_ANYTYPE
 		case "bool":
-			token.typ = TT_BOOL
+			token.Typ = TT_BOOL
 		case "char":
-			token.typ = TT_CHAR
+			token.Typ = TT_CHAR
 		case "const":
-			token.typ = TT_CONST
+			token.Typ = TT_CONST
 		case "float64":
-			token.typ = TT_FLOAT64
+			token.Typ = TT_FLOAT64
 		case "float32":
-			token.typ = TT_FLOAT32
+			token.Typ = TT_FLOAT32
 		case "void":
-			token.typ = TT_VOID
+			token.Typ = TT_VOID
+		case "return":
+			token.Typ = TT_RETURN
 	}
 
 	return token;
@@ -164,17 +175,22 @@ func lex_identifier(iter *int, dat []byte) Token {
 func lex_octal(iter *int, dat[]byte) Token {
 	var token Token
 
+	token.Char = char
+	token.Line = line
+
 	for is_numeric(rune(dat[*iter])) && !is_at_end(*iter, dat) {
 		if dat[*iter] >= '8' {
 			report.Errorf("In Lexer :: Digits above 7 are not allowed in octal numbers.\n")
 		}
 
-		token.lexeme += string(dat[*iter])
+		token.Lexeme += string(dat[*iter])
+		*iter++;
 	}
 
-	token.typ = TT_OCTNUM
-	token.line = line
-	token.char = char
+	token.Typ = TT_OCTNUM
+
+	*iter--
+	char--
 
 	return token
 }
@@ -182,15 +198,20 @@ func lex_octal(iter *int, dat[]byte) Token {
 func lex_hex(iter *int, dat []byte) Token {
 	var token Token
 
-	token.lexeme += "0x"
+	token.Lexeme += "0x"
+
+	token.Char = char
+	token.Line = line
 
 	for is_hex(rune(dat[*iter])) && !is_at_end(*iter, dat) {
-		token.lexeme += string(dat[*iter])
+		token.Lexeme += string(dat[*iter])
+		*iter++
 	}
 
-	token.typ = TT_HEXNUM
-	token.line = line
-	token.char = char
+	token.Typ = TT_HEXNUM
+
+	*iter--
+	char--
 
 	return token
 }
@@ -198,60 +219,65 @@ func lex_hex(iter *int, dat []byte) Token {
 func lex_number(iter *int, dat []byte) Token {
 	var token Token
 
+	token.Char = char;
+	token.Line = line;
+
 	for is_numeric(rune(dat[*iter])) && !is_at_end(*iter, dat) {
-		token.lexeme += string(dat[*iter])
+		token.Lexeme += string(dat[*iter])
 		*iter++
 		char++
 	}
 
-	token.line = line;
-	token.char = char;
-
 	if dat[*iter] != '.' {
-		token.typ = TT_INTEGER
+		token.Typ = TT_INTEGER
+		*iter--
+		char--
 		return token
 	}
 
-	token.lexeme += "."
+	token.Lexeme += "."
 
 	*iter++;
 
 	for is_numeric(rune(dat[*iter])) {
-		token.lexeme += string(dat[*iter])
+		token.Lexeme += string(dat[*iter])
 		*iter++
 		char++
 	}
 
-	token.typ = TT_FLOATNUM
+	*iter--
+	char--
+
+	token.Typ = TT_FLOATNUM
 
 	return token
 }
 
 func notoken() Token {
-	return Token {typ: TT_NONE, lexeme: ""}
+	return Token {Typ: TT_NONE, Lexeme: ""}
 }
 
 func lex_character(iter *int, dat []byte) Token {
 	switch dat[*iter] {
 	case '(':
-		return Token {typ: TT_ORP, lexeme: "", line: line, char: char}
+		return Token {Typ: TT_ORP, Lexeme: "", Line: line, Char: char}
 	case ')':
-		return Token {typ: TT_CRP, lexeme: "", line: line, char: char}
+		return Token {Typ: TT_CRP, Lexeme: "", Line: line, Char: char}
 	case '[':
-		return Token {typ: TT_OSP, lexeme: "", line: line, char: char}
+		return Token {Typ: TT_OSP, Lexeme: "", Line: line, Char: char}
 	case ']':
-		return Token {typ: TT_CSP, lexeme: "", line: line, char: char}
+		return Token {Typ: TT_CSP, Lexeme: "", Line: line, Char: char}
 	case '{':
-		return Token {typ: TT_OBR, lexeme: "", line: line, char: char}
+		return Token {Typ: TT_OBR, Lexeme: "", Line: line, Char: char}
 	case '}':
-		return Token {typ: TT_CBR, lexeme: "", line: line, char: char}
+		return Token {Typ: TT_CBR, Lexeme: "", Line: line, Char: char}
 	case ';':
-		return Token {typ: TT_SEMICOLON, lexeme: "", line: line, char: char}
+		return Token {Typ: TT_SEMICOLON, Lexeme: "", Line: line, Char: char}
 	case '"':
 		return lex_string(iter, dat)
 	case '0': {
-		if is_at_end(*iter + 1, dat) {
-			return Token {typ: TT_INTEGER, lexeme: "0", line: line, char: char}
+		if is_at_end(*iter + 1, dat) || !is_numeric(rune(dat[*iter + 1])) {
+			return Token {Typ: TT_INTEGER, Lexeme: "0", Line: line, Char: char}
 		}
 
 		if dat[*iter + 1] == 'x' {
@@ -281,6 +307,22 @@ func lex_character(iter *int, dat []byte) Token {
 	}
 }
 
+func LexStr(code []uint8) []Token {
+	var i int = 0
+
+	var tokens []Token
+
+	for i < len(code) {
+		tokens = append(tokens, lex_character(&i, code))
+		i++
+		char++
+	}
+
+	return Filter(tokens, func (a Token) bool {
+		return a.Typ != TT_NONE
+	})
+}
+
 func LexFile(file string) []Token {
 	dat, err := os.ReadFile(file)
 
@@ -289,16 +331,15 @@ func LexFile(file string) []Token {
 		return nil
 	}
 
-	var i int = 0
+	return LexStr(dat);
+}
 
-	var tokens []Token
-
-	for i < len(dat) {
-		fmt.Printf("Lexing %c\n", dat[i])
-		tokens = append(tokens, lex_character(&i, dat))
-		i++
-		char++
+func Filter[E any](s []E, f func(E) bool) []E {
+	s2 := make([]E, 0, len(s))
+	for _, e := range s {
+		if f(e) {
+			 s2 = append(s2, e)
+		}
 	}
-
-	return tokens
+	return s2
 }
