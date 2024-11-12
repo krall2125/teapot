@@ -1,3 +1,4 @@
+// sorry for not making the code really clean
 package lexer
 
 import (
@@ -9,6 +10,7 @@ import (
 type TokenType int
 const (
 	// GO ENUMS SUCK
+	// h
 	TT_NONE = iota
 
 	TT_INT
@@ -41,6 +43,48 @@ const (
 	TT_FLOATNUM
 
 	TT_SEMICOLON
+
+	// Arithmetic operators
+	TT_PLUS
+	TT_MINUS
+	TT_STAR
+	TT_SLASH
+	TT_PERCENT
+
+	// Bitwise operators
+	TT_BAND
+	TT_BOR
+	TT_BNOT
+	TT_BXOR
+
+	// Comparison operators
+	TT_EQUAL
+	TT_NEQUAL
+	TT_GREATER
+	TT_LESS
+	TT_GREATER_EQ
+	TT_LESS_EQ
+
+	// Logical operators
+	TT_LAND
+	TT_LOR
+	TT_LNOT
+
+	// Assignment operators
+	TT_EQ
+	TT_PLUS_EQ
+	TT_MINUS_EQ
+	TT_STAR_EQ
+	TT_SLASH_EQ
+	TT_PERCENT_EQ
+
+	TT_BAND_EQ
+	TT_BOR_EQ
+	TT_BNOT_EQ
+	TT_BXOR_EQ
+
+	TT_INCREMENT
+	TT_DECREMENT
 )
 
 func TT_ToStr(tt TokenType) string {
@@ -70,6 +114,35 @@ func TT_ToStr(tt TokenType) string {
 		"TT_OCTNUM",
 		"TT_FLOATNUM",
 		"TT_SEMICOLON",
+		"TT_PLUS",
+		"TT_MINUS",
+		"TT_STAR",
+		"TT_SLASH",
+		"TT_PERCENT",
+		"TT_BAND",
+		"TT_BOR",
+		"TT_BNOT",
+		"TT_BXOR",
+		"TT_EQUAL",
+		"TT_NEQUAL",
+		"TT_GREATER",
+		"TT_LESS",
+		"TT_GREATER_EQ",
+		"TT_LESS_EQ",
+		"TT_LAND",
+		"TT_LOR",
+		"TT_EQ",
+		"TT_PLUS_EQ",
+		"TT_MINUS_EQ",
+		"TT_STAR_EQ",
+		"TT_SLASH_EQ",
+		"TT_PERCENT_EQ",
+		"TT_BAND_EQ",
+		"TT_BOR_EQ",
+		"TT_BNOT_EQ",
+		"TT_BXOR_EQ",
+		"TT_INCREMENT",
+		"TT_DECREMENT",
 	}[tt]
 }
 
@@ -80,24 +153,12 @@ type Token struct {
 	Char int
 }
 
+func notoken() Token {
+	return Token {Typ: TT_NONE, Lexeme: ""}
+}
+
 var line int = 1
 var char int = 0
-
-func is_numeric(r rune) bool {
-	return (r >= '0' && r <= '9')
-}
-
-func is_alpha(r rune) bool {
-	return (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || r == '_'
-}
-
-func is_hex(r rune) bool {
-	return is_numeric(r) || (r >= 'A' && r <= 'F') || (r >= 'a' && r <= 'f')
-}
-
-func is_at_end(iter int, dat []byte) bool {
-	return iter == len(dat)
-}
 
 func lex_string(iter *int, dat []byte) Token {
 	*iter++
@@ -145,28 +206,28 @@ func lex_identifier(iter *int, dat []byte) Token {
 	char--
 
 	switch token.Lexeme {
-		case "int":
-			token.Typ = TT_INT
-		case "string":
-			token.Typ = TT_STRING
-		case "any":
-			token.Typ = TT_ANY
-		case "anyType":
-			token.Typ = TT_ANYTYPE
-		case "bool":
-			token.Typ = TT_BOOL
-		case "char":
-			token.Typ = TT_CHAR
-		case "const":
-			token.Typ = TT_CONST
-		case "float64":
-			token.Typ = TT_FLOAT64
-		case "float32":
-			token.Typ = TT_FLOAT32
-		case "void":
-			token.Typ = TT_VOID
-		case "return":
-			token.Typ = TT_RETURN
+	case "int":
+		token.Typ = TT_INT
+	case "string":
+		token.Typ = TT_STRING
+	case "any":
+		token.Typ = TT_ANY
+	case "anyType":
+		token.Typ = TT_ANYTYPE
+	case "bool":
+		token.Typ = TT_BOOL
+	case "char":
+		token.Typ = TT_CHAR
+	case "const":
+		token.Typ = TT_CONST
+	case "float64":
+		token.Typ = TT_FLOAT64
+	case "float32":
+		token.Typ = TT_FLOAT32
+	case "void":
+		token.Typ = TT_VOID
+	case "return":
+		token.Typ = TT_RETURN
 	}
 
 	return token;
@@ -253,10 +314,6 @@ func lex_number(iter *int, dat []byte) Token {
 	return token
 }
 
-func notoken() Token {
-	return Token {Typ: TT_NONE, Lexeme: ""}
-}
-
 func lex_character(iter *int, dat []byte) Token {
 	switch dat[*iter] {
 	case '(':
@@ -273,6 +330,214 @@ func lex_character(iter *int, dat []byte) Token {
 		return Token {Typ: TT_CBR, Lexeme: "", Line: line, Char: char}
 	case ';':
 		return Token {Typ: TT_SEMICOLON, Lexeme: "", Line: line, Char: char}
+	// arithmetic operators
+	case '+': {
+		if is_at_end(*iter + 1, dat) {
+			return Token {Typ: TT_PLUS, Lexeme: "", Line: line, Char: char}
+		}
+
+		switch dat[*iter + 1] {
+			case '+': {
+				*iter++
+				return Token {Typ: TT_INCREMENT, Lexeme: "", Line: line, Char: char}
+			}
+			case '=': {
+				*iter++
+				return Token {Typ: TT_PLUS_EQ, Lexeme: "", Line: line, Char: char}
+			}
+		default:
+			return Token {Typ: TT_PLUS, Lexeme: "", Line: line, Char: char}
+		}
+	}
+	case '-': {
+		if is_at_end(*iter + 1, dat) {
+			return Token {Typ: TT_MINUS, Lexeme: "", Line: line, Char: char}
+		}
+
+		switch dat[*iter + 1] {
+			case '-': {
+				*iter++
+				return Token {Typ: TT_DECREMENT, Lexeme: "", Line: line, Char: char}
+			}
+			case '=': {
+				*iter++
+				return Token {Typ: TT_MINUS_EQ, Lexeme: "", Line: line, Char: char}
+			}
+		default:
+			return Token {Typ: TT_MINUS, Lexeme: "", Line: line, Char: char}
+		}
+	}
+	case '*': {
+		if is_at_end(*iter + 1, dat) {
+			return Token {Typ: TT_STAR, Lexeme: "", Line: line, Char: char}
+		}
+
+		switch dat[*iter + 1] {
+			case '=': {
+				*iter++
+				return Token {Typ: TT_STAR_EQ, Lexeme: "", Line: line, Char: char}
+			}
+		default:
+			return Token {Typ: TT_STAR, Lexeme: "", Line: line, Char: char}
+		}
+	}
+	case '/': {
+		if is_at_end(*iter + 1, dat) {
+			return Token {Typ: TT_SLASH, Lexeme: "", Line: line, Char: char}
+		}
+
+		switch dat[*iter + 1] {
+			case '/': {
+				// comment
+				for !is_at_end(*iter, dat) && dat[*iter] != '\n' {
+					*iter++
+				}
+				char = 0
+				line++
+				return Token {Typ: TT_NONE, Lexeme: "", Line: line, Char: char}
+			}
+			case '=': {
+				*iter++
+				return Token {Typ: TT_SLASH_EQ, Lexeme: "", Line: line, Char: char}
+			}
+		default:
+			return Token {Typ: TT_SLASH, Lexeme: "", Line: line, Char: char}
+		}
+	}
+	case '%': {
+		if is_at_end(*iter + 1, dat) {
+			return Token {Typ: TT_PERCENT, Lexeme: "", Line: line, Char: char}
+		}
+
+		switch dat[*iter + 1] {
+			case '=': {
+				*iter++
+				return Token {Typ: TT_PERCENT_EQ, Lexeme: "", Line: line, Char: char}
+			}
+		default:
+			return Token {Typ: TT_PERCENT, Lexeme: "", Line: line, Char: char}
+		}
+	}
+	case '&': {
+		if is_at_end(*iter + 1, dat) {
+			return Token {Typ: TT_BAND, Lexeme: "", Line: line, Char: char}
+		}
+
+		switch dat[*iter + 1] {
+			case '=': {
+				*iter++
+				return Token {Typ: TT_BAND_EQ, Lexeme: "", Line: line, Char: char - 1}
+			}
+			case '&': {
+				*iter++
+				return Token {Typ: TT_LAND, Lexeme: "", Line: line, Char: char - 1}
+			}
+		default:
+			return Token {Typ: TT_BAND, Lexeme: "", Line: line, Char: char}
+		}
+	}
+	case '|': {
+		if is_at_end(*iter + 1, dat) {
+			return Token {Typ: TT_BOR, Lexeme: "", Line: line, Char: char}
+		}
+
+		switch dat[*iter + 1] {
+			case '=': {
+				*iter++
+				return Token {Typ: TT_BOR_EQ, Lexeme: "", Line: line, Char: char - 1}
+			}
+			case '|': {
+				*iter++
+				return Token {Typ: TT_LOR, Lexeme: "", Line: line, Char: char - 1}
+			}
+		default:
+			return Token {Typ: TT_BOR, Lexeme: "", Line: line, Char: char}
+		}
+	}
+	case '~': {
+		if is_at_end(*iter + 1, dat) {
+			return Token {Typ: TT_BNOT, Lexeme: "", Line: line, Char: char}
+		}
+
+		switch dat[*iter + 1] {
+			case '=': {
+				*iter++
+				return Token {Typ: TT_BNOT_EQ, Lexeme: "", Line: line, Char: char - 1}
+			}
+		default:
+			return Token {Typ: TT_BNOT, Lexeme: "", Line: line, Char: char}
+		}
+	}
+	case '^': {
+		if is_at_end(*iter + 1, dat) {
+			return Token {Typ: TT_BXOR, Lexeme: "", Line: line, Char: char}
+		}
+
+		switch dat[*iter + 1] {
+			case '=': {
+				*iter++
+				return Token {Typ: TT_BXOR_EQ, Lexeme: "", Line: line, Char: char - 1}
+			}
+		default:
+			return Token {Typ: TT_BXOR, Lexeme: "", Line: line, Char: char}
+		}
+	}
+	case '=': {
+		if is_at_end(*iter + 1, dat) {
+			return Token {Typ: TT_EQ, Lexeme: "", Line: line, Char: char}
+		}
+
+		switch dat[*iter + 1] {
+			case '=': {
+				*iter++
+				return Token {Typ: TT_EQUAL, Lexeme: "", Line: line, Char: char - 1}
+			}
+		default:
+			return Token {Typ: TT_EQ, Lexeme: "", Line: line, Char: char}
+		}
+	}
+	case '!': {
+		if is_at_end(*iter + 1, dat) {
+			return Token {Typ: TT_LNOT, Lexeme: "", Line: line, Char: char}
+		}
+
+		switch dat[*iter + 1] {
+			case '=': {
+				*iter++
+				return Token {Typ: TT_NEQUAL, Lexeme: "", Line: line, Char: char - 1}
+			}
+		default:
+			return Token {Typ: TT_LNOT, Lexeme: "", Line: line, Char: char}
+		}
+	}
+	case '>': {
+		if is_at_end(*iter + 1, dat) {
+			return Token {Typ: TT_GREATER, Lexeme: "", Line: line, Char: char}
+		}
+
+		switch dat[*iter + 1] {
+			case '=': {
+				*iter++
+				return Token {Typ: TT_GREATER_EQ, Lexeme: "", Line: line, Char: char - 1}
+			}
+		default:
+			return Token {Typ: TT_GREATER, Lexeme: "", Line: line, Char: char}
+		}
+	}
+	case '<': {
+		if is_at_end(*iter + 1, dat) {
+			return Token {Typ: TT_LESS, Lexeme: "", Line: line, Char: char}
+		}
+
+		switch dat[*iter + 1] {
+			case '=': {
+				*iter++
+				return Token {Typ: TT_LESS_EQ, Lexeme: "", Line: line, Char: char - 1}
+			}
+		default:
+			return Token {Typ: TT_LESS, Lexeme: "", Line: line, Char: char}
+		}
+	}
 	case '"':
 		return lex_string(iter, dat)
 	case '0': {
@@ -305,6 +570,22 @@ func lex_character(iter *int, dat []byte) Token {
 		}
 	}
 	}
+}
+
+func is_numeric(r rune) bool {
+	return (r >= '0' && r <= '9')
+}
+
+func is_alpha(r rune) bool {
+	return (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || r == '_'
+}
+
+func is_hex(r rune) bool {
+	return is_numeric(r) || (r >= 'A' && r <= 'F') || (r >= 'a' && r <= 'f')
+}
+
+func is_at_end(iter int, dat []byte) bool {
+	return iter == len(dat)
 }
 
 func LexStr(code []uint8) []Token {
