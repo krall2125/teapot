@@ -190,11 +190,7 @@ func (lexer *Lexer) is_at_end() bool {
 func (lexer *Lexer) lex_string() Token {
 	lexer.advance()
 
-	var token Token
-
-	token.Typ = TT_STR
-	token.Char = lexer.char
-	token.Line = lexer.line
+	var token Token = NewToken(TT_STR, "", lexer.line, lexer.char)
 
 	for lexer.dat[lexer.iter] != '"' {
 		if lexer.is_at_end() {
@@ -214,7 +210,7 @@ func (lexer *Lexer) lex_identifier() Token {
 	var token Token = NewToken(TT_IDENTIFIER, "", lexer.line, lexer.char)
 
 	for is_alpha(lexer.dat[lexer.iter]) && !lexer.is_at_end() {
-		token.Lexeme += string(lexer.dat[lexer.iter]);
+		token.Lexeme += string(lexer.dat[lexer.iter])
 		lexer.advance()
 	}
 
@@ -246,81 +242,65 @@ func (lexer *Lexer) lex_identifier() Token {
 	return token;
 }
 
-func lex_octal(iter *int, dat[]byte) Token {
-	var token Token
+func (lexer *Lexer) lex_octal() Token {
+	var token Token = NewToken(TT_OCTNUM, "", lexer.line, lexer.char)
 
-	token.Char = char
-	token.Line = line
-
-	for is_numeric(rune(dat[*iter])) && !is_at_end(*iter, dat) {
-		if dat[*iter] >= '8' {
+	for is_numeric(lexer.dat[lexer.iter]) && !lexer.is_at_end() {
+		if lexer.dat[lexer.iter] >= '8' {
 			report.Errorf("In Lexer :: Digits above 7 are not allowed in octal numbers.\n")
 		}
 
-		token.Lexeme += string(dat[*iter])
-		*iter++;
+		token.Lexeme += string(lexer.dat[lexer.iter])
+		lexer.advance()
 	}
 
 	token.Typ = TT_OCTNUM
 
-	*iter--
-	char--
+	lexer.iter--
+	lexer.char--
 
 	return token
 }
 
-func lex_hex(iter *int, dat []byte) Token {
-	var token Token
+func (lexer *Lexer) lex_hex() Token {
+	var token Token = NewToken(TT_HEXNUM, "0x", lexer.line, lexer.char)
 
-	token.Lexeme += "0x"
-
-	token.Char = char
-	token.Line = line
-
-	for is_hex(rune(dat[*iter])) && !is_at_end(*iter, dat) {
-		token.Lexeme += string(dat[*iter])
-		*iter++
+	for is_hex(lexer.dat[lexer.iter]) && !lexer.is_at_end() {
+		token.Lexeme += string(lexer.dat[lexer.iter])
+		lexer.advance()
 	}
 
-	token.Typ = TT_HEXNUM
-
-	*iter--
-	char--
+	lexer.iter--
+	lexer.char--
 
 	return token
 }
 
-func lex_number(iter *int, dat []byte) Token {
-	var token Token
+func (lexer *Lexer) lex_number() Token {
+	var token Token = NewToken(TT_INTEGER, "", lexer.line, lexer.char)
 
-	token.Char = char;
-	token.Line = line;
-
-	for is_numeric(rune(dat[*iter])) && !is_at_end(*iter, dat) {
-		token.Lexeme += string(dat[*iter])
-		*iter++
-		char++
+	for is_numeric(lexer.dat[lexer.iter]) && !lexer.is_at_end() {
+		token.Lexeme += string(lexer.dat[lexer.iter])
+		lexer.advance()
 	}
 
-	if dat[*iter] != '.' {
-		token.Typ = TT_INTEGER
-		*iter--
-		char--
+	if lexer.dat[lexer.iter] != '.' {
+		lexer.iter--
+		lexer.char--
 		return token
 	}
 
 	token.Lexeme += "."
 
-	*iter++;
+	lexer.advance()
 
-	for is_numeric(rune(dat[*iter])) {
-		token.Lexeme += string(dat[*iter])
-		*iter++
-		char++
+	for is_numeric(lexer.dat[lexer.iter]) {
+		token.Lexeme += string(lexer.dat[lexer.iter])
+		lexer.advance()
 	}
 
-	*iter--
-	char--
+	lexer.iter--
+	lexer.char--
 
 	token.Typ = TT_FLOATNUM
 
