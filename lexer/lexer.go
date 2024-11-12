@@ -169,6 +169,15 @@ type Lexer struct {
 	dat []byte
 }
 
+func NewLexer(dat []byte) Lexer {
+	return Lexer {
+		line: 1,
+		char: 0,
+		iter: 0,
+		dat: dat,
+	}
+}
+
 func (lexer *Lexer) advance() {
 	lexer.iter++
 	lexer.char++
@@ -180,11 +189,16 @@ func (lexer *Lexer) advance() {
 	if lexer.dat[lexer.iter] == '\n' {
 		lexer.line++
 		lexer.char = 0
+		lexer.iter++
 	}
 }
 
 func (lexer *Lexer) is_at_end() bool {
 	return lexer.iter == len(lexer.dat)
+}
+
+func (lexer *Lexer) is_at_end_next() bool {
+	return lexer.iter + 1 == len(lexer.dat)
 }
 
 func (lexer *Lexer) lex_string() Token {
@@ -307,259 +321,254 @@ func (lexer *Lexer) lex_number() Token {
 	return token
 }
 
-func lex_character(iter *int, dat []byte) Token {
-	switch dat[*iter] {
+func (lexer *Lexer) lex_character() Token {
+	switch lexer.dat[lexer.iter] {
 	case '(':
-		return Token {Typ: TT_ORP, Lexeme: "", Line: line, Char: char}
+		return NewToken(TT_ORP, "", lexer.line, lexer.char)
 	case ')':
-		return Token {Typ: TT_CRP, Lexeme: "", Line: line, Char: char}
+		return NewToken(TT_CRP, "", lexer.line, lexer.char)
 	case '[':
-		return Token {Typ: TT_OSP, Lexeme: "", Line: line, Char: char}
+		return NewToken(TT_OSP, "", lexer.line, lexer.char)
 	case ']':
-		return Token {Typ: TT_CSP, Lexeme: "", Line: line, Char: char}
+		return NewToken(TT_CSP, "", lexer.line, lexer.char)
 	case '{':
-		return Token {Typ: TT_OBR, Lexeme: "", Line: line, Char: char}
+		return NewToken(TT_OBR, "", lexer.line, lexer.char)
 	case '}':
-		return Token {Typ: TT_CBR, Lexeme: "", Line: line, Char: char}
+		return NewToken(TT_CBR, "", lexer.line, lexer.char)
 	case ';':
-		return Token {Typ: TT_SEMICOLON, Lexeme: "", Line: line, Char: char}
+		return NewToken(TT_SEMICOLON, "", lexer.line, lexer.char)
 	// arithmetic operators
 	case '+': {
-		if is_at_end(*iter + 1, dat) {
-			return Token {Typ: TT_PLUS, Lexeme: "", Line: line, Char: char}
+		if lexer.is_at_end_next() {
+			return NewToken(TT_PLUS, "", lexer.line, lexer.char)
 		}
 
-		switch dat[*iter + 1] {
-			case '+': {
-				*iter++
-				return Token {Typ: TT_INCREMENT, Lexeme: "", Line: line, Char: char}
-			}
-			case '=': {
-				*iter++
-				return Token {Typ: TT_PLUS_EQ, Lexeme: "", Line: line, Char: char}
-			}
+		switch lexer.dat[lexer.iter + 1] {
+		case '+': {
+			lexer.advance()
+			return NewToken(TT_INCREMENT, "", lexer.line, lexer.char)
+		}
+		case '=': {
+			lexer.advance()
+			return NewToken(TT_PLUS_EQ, "", lexer.line, lexer.char)
+		}
 		default:
-			return Token {Typ: TT_PLUS, Lexeme: "", Line: line, Char: char}
+			return NewToken(TT_PLUS, "", lexer.line, lexer.char)
 		}
 	}
 	case '-': {
-		if is_at_end(*iter + 1, dat) {
-			return Token {Typ: TT_MINUS, Lexeme: "", Line: line, Char: char}
+		if lexer.is_at_end_next() {
+			return NewToken(TT_MINUS, "", lexer.line, lexer.char)
 		}
 
-		switch dat[*iter + 1] {
-			case '-': {
-				*iter++
-				return Token {Typ: TT_DECREMENT, Lexeme: "", Line: line, Char: char}
-			}
-			case '=': {
-				*iter++
-				return Token {Typ: TT_MINUS_EQ, Lexeme: "", Line: line, Char: char}
-			}
+		switch lexer.dat[lexer.iter + 1] {
+		case '-': {
+			lexer.advance()
+			return NewToken(TT_DECREMENT, "", lexer.line, lexer.char)
+		}
+		case '=': {
+			lexer.advance()
+			return NewToken(TT_MINUS_EQ, "", lexer.line, lexer.char)
+		}
 		default:
-			return Token {Typ: TT_MINUS, Lexeme: "", Line: line, Char: char}
+			return NewToken(TT_MINUS, "", lexer.line, lexer.char)
 		}
 	}
 	case '*': {
-		if is_at_end(*iter + 1, dat) {
-			return Token {Typ: TT_STAR, Lexeme: "", Line: line, Char: char}
+		if lexer.is_at_end_next() {
+			return NewToken(TT_STAR, "", lexer.line, lexer.char)
 		}
 
-		switch dat[*iter + 1] {
-			case '=': {
-				*iter++
-				return Token {Typ: TT_STAR_EQ, Lexeme: "", Line: line, Char: char}
-			}
+		switch lexer.dat[lexer.iter + 1] {
+		case '=': {
+			lexer.iter++
+			return NewToken(TT_STAR_EQ, "", lexer.line, lexer.char)
+		}
 		default:
-			return Token {Typ: TT_STAR, Lexeme: "", Line: line, Char: char}
+			return NewToken(TT_STAR, "", lexer.line, lexer.char)
 		}
 	}
 	case '/': {
-		if is_at_end(*iter + 1, dat) {
-			return Token {Typ: TT_SLASH, Lexeme: "", Line: line, Char: char}
+		if lexer.is_at_end_next() {
+			return NewToken(TT_SLASH, "", lexer.line, lexer.char)
 		}
 
-		switch dat[*iter + 1] {
-			case '/': {
-				// comment
-				for !is_at_end(*iter, dat) && dat[*iter] != '\n' {
-					*iter++
-				}
-				char = 0
-				line++
-				return Token {Typ: TT_NONE, Lexeme: "", Line: line, Char: char}
+		switch lexer.dat[lexer.iter + 1] {
+		case '/': {
+			// comment
+			for !lexer.is_at_end() && lexer.dat[lexer.iter] != '\n' {
+				lexer.advance()
 			}
-			case '=': {
-				*iter++
-				return Token {Typ: TT_SLASH_EQ, Lexeme: "", Line: line, Char: char}
-			}
+			return NewToken(TT_NONE, "", lexer.line, lexer.char)
+		}
+		case '=': {
+			lexer.iter++
+			return NewToken(TT_SLASH_EQ, "", lexer.line, lexer.char)
+		}
 		default:
-			return Token {Typ: TT_SLASH, Lexeme: "", Line: line, Char: char}
+			return NewToken(TT_SLASH, "", lexer.line, lexer.char)
 		}
 	}
 	case '%': {
-		if is_at_end(*iter + 1, dat) {
-			return Token {Typ: TT_PERCENT, Lexeme: "", Line: line, Char: char}
+		if lexer.is_at_end_next() {
+			return NewToken(TT_PERCENT, "", lexer.line, lexer.char)
 		}
 
-		switch dat[*iter + 1] {
-			case '=': {
-				*iter++
-				return Token {Typ: TT_PERCENT_EQ, Lexeme: "", Line: line, Char: char}
-			}
+		switch lexer.dat[lexer.iter + 1] {
+		case '=': {
+			lexer.advance()
+			return NewToken(TT_PERCENT_EQ, "", lexer.line, lexer.char)
+		}
 		default:
-			return Token {Typ: TT_PERCENT, Lexeme: "", Line: line, Char: char}
+			return NewToken(TT_PERCENT, "", lexer.line, lexer.char)
 		}
 	}
 	case '&': {
-		if is_at_end(*iter + 1, dat) {
-			return Token {Typ: TT_BAND, Lexeme: "", Line: line, Char: char}
+		if lexer.is_at_end_next() {
+			return NewToken(TT_BAND, "", lexer.line, lexer.char)
 		}
 
-		switch dat[*iter + 1] {
-			case '=': {
-				*iter++
-				return Token {Typ: TT_BAND_EQ, Lexeme: "", Line: line, Char: char - 1}
-			}
-			case '&': {
-				*iter++
-				return Token {Typ: TT_LAND, Lexeme: "", Line: line, Char: char - 1}
-			}
+		switch lexer.dat[lexer.iter + 1] {
+		case '=': {
+			lexer.advance()
+			return NewToken(TT_BAND_EQ, "", lexer.line, lexer.char - 1)
+		}
+		case '&': {
+			lexer.advance()
+			return NewToken(TT_LAND, "", lexer.line, lexer.char - 1)
+		}
 		default:
-			return Token {Typ: TT_BAND, Lexeme: "", Line: line, Char: char}
+			return NewToken(TT_BAND, "", lexer.line, lexer.char)
 		}
 	}
 	case '|': {
-		if is_at_end(*iter + 1, dat) {
-			return Token {Typ: TT_BOR, Lexeme: "", Line: line, Char: char}
+		if lexer.is_at_end_next() {
+			return NewToken(TT_BOR, "", lexer.line, lexer.char)
 		}
 
-		switch dat[*iter + 1] {
-			case '=': {
-				*iter++
-				return Token {Typ: TT_BOR_EQ, Lexeme: "", Line: line, Char: char - 1}
-			}
-			case '|': {
-				*iter++
-				return Token {Typ: TT_LOR, Lexeme: "", Line: line, Char: char - 1}
-			}
+		switch lexer.dat[lexer.iter + 1] {
+		case '=': {
+			lexer.advance()
+			return NewToken(TT_BOR_EQ, "", lexer.line, lexer.char - 1)
+		}
+		case '|': {
+			lexer.advance()
+			return NewToken(TT_LOR, "", lexer.line, lexer.char - 1)
+		}
 		default:
-			return Token {Typ: TT_BOR, Lexeme: "", Line: line, Char: char}
+			return NewToken(TT_BOR, "", lexer.line, lexer.char)
 		}
 	}
 	case '~': {
-		if is_at_end(*iter + 1, dat) {
-			return Token {Typ: TT_BNOT, Lexeme: "", Line: line, Char: char}
+		if lexer.is_at_end_next() {
+			return NewToken(TT_BNOT, "", lexer.line, lexer.char)
 		}
 
-		switch dat[*iter + 1] {
-			case '=': {
-				*iter++
-				return Token {Typ: TT_BNOT_EQ, Lexeme: "", Line: line, Char: char - 1}
-			}
+		switch lexer.dat[lexer.iter + 1] {
+		case '=': {
+			lexer.advance()
+			return NewToken(TT_BNOT_EQ, "", lexer.line, lexer.char - 1)
+		}
 		default:
-			return Token {Typ: TT_BNOT, Lexeme: "", Line: line, Char: char}
+			return NewToken(TT_BNOT, "", lexer.line, lexer.char)
 		}
 	}
 	case '^': {
-		if is_at_end(*iter + 1, dat) {
-			return Token {Typ: TT_BXOR, Lexeme: "", Line: line, Char: char}
+		if lexer.is_at_end_next() {
+			return NewToken(TT_BXOR, "", lexer.line, lexer.char)
 		}
 
-		switch dat[*iter + 1] {
-			case '=': {
-				*iter++
-				return Token {Typ: TT_BXOR_EQ, Lexeme: "", Line: line, Char: char - 1}
-			}
+		switch lexer.dat[lexer.iter + 1] {
+		case '=': {
+			lexer.advance()
+			return NewToken(TT_BXOR_EQ, "", lexer.line, lexer.char - 1)
+		}
 		default:
-			return Token {Typ: TT_BXOR, Lexeme: "", Line: line, Char: char}
+			return NewToken(TT_BXOR, "", lexer.line, lexer.char)
 		}
 	}
 	case '=': {
-		if is_at_end(*iter + 1, dat) {
-			return Token {Typ: TT_EQ, Lexeme: "", Line: line, Char: char}
+		if lexer.is_at_end_next() {
+			return NewToken(TT_EQ, "", lexer.line, lexer.char)
 		}
 
-		switch dat[*iter + 1] {
-			case '=': {
-				*iter++
-				return Token {Typ: TT_EQUAL, Lexeme: "", Line: line, Char: char - 1}
-			}
+		switch lexer.dat[lexer.iter + 1] {
+		case '=': {
+			lexer.advance()
+			return NewToken(TT_EQUAL, "", lexer.line, lexer.char - 1)
+		}
 		default:
-			return Token {Typ: TT_EQ, Lexeme: "", Line: line, Char: char}
+			return NewToken(TT_EQ, "", lexer.line, lexer.char)
 		}
 	}
 	case '!': {
-		if is_at_end(*iter + 1, dat) {
-			return Token {Typ: TT_LNOT, Lexeme: "", Line: line, Char: char}
+		if lexer.is_at_end_next() {
+			return NewToken(TT_LNOT, "", lexer.line, lexer.char)
 		}
 
-		switch dat[*iter + 1] {
-			case '=': {
-				*iter++
-				return Token {Typ: TT_NEQUAL, Lexeme: "", Line: line, Char: char - 1}
-			}
+		switch lexer.dat[lexer.iter + 1] {
+		case '=': {
+			lexer.advance()
+			return NewToken(TT_NEQUAL, "", lexer.line, lexer.char - 1)
+		}
 		default:
-			return Token {Typ: TT_LNOT, Lexeme: "", Line: line, Char: char}
+			return NewToken(TT_LNOT, "", lexer.line, lexer.char)
 		}
 	}
 	case '>': {
-		if is_at_end(*iter + 1, dat) {
-			return Token {Typ: TT_GREATER, Lexeme: "", Line: line, Char: char}
+		if lexer.is_at_end_next() {
+			return NewToken(TT_GREATER, "", lexer.line, lexer.char)
 		}
 
-		switch dat[*iter + 1] {
-			case '=': {
-				*iter++
-				return Token {Typ: TT_GREATER_EQ, Lexeme: "", Line: line, Char: char - 1}
-			}
+		switch lexer.dat[lexer.iter + 1] {
+		case '=': {
+			lexer.advance()
+			return NewToken(TT_GREATER_EQ, "", lexer.line, lexer.char - 1)
+		}
 		default:
-			return Token {Typ: TT_GREATER, Lexeme: "", Line: line, Char: char}
+			return NewToken(TT_GREATER, "", lexer.line, lexer.char)
 		}
 	}
 	case '<': {
-		if is_at_end(*iter + 1, dat) {
-			return Token {Typ: TT_LESS, Lexeme: "", Line: line, Char: char}
+		if lexer.is_at_end_next() {
+			return NewToken(TT_LESS, "", lexer.line, lexer.char)
 		}
 
-		switch dat[*iter + 1] {
+		switch lexer.dat[lexer.iter + 1] {
 			case '=': {
-				*iter++
-				return Token {Typ: TT_LESS_EQ, Lexeme: "", Line: line, Char: char - 1}
+				lexer.advance()
+				return NewToken(TT_LESS_EQ, "", lexer.line, lexer.char - 1)
 			}
 		default:
-			return Token {Typ: TT_LESS, Lexeme: "", Line: line, Char: char}
+			return NewToken(TT_LESS, "", lexer.line, lexer.char)
 		}
 	}
 	case '"':
-		return lex_string(iter, dat)
+		return lexer.lex_string()
 	case '0': {
-		if is_at_end(*iter + 1, dat) || !is_numeric(rune(dat[*iter + 1])) {
-			return Token {Typ: TT_INTEGER, Lexeme: "0", Line: line, Char: char}
+		if lexer.is_at_end_next() || !is_numeric(lexer.dat[lexer.iter + 1]) {
+			return NewToken(TT_INTEGER, "0", lexer.line, lexer.char)
 		}
 
-		if dat[*iter + 1] == 'x' {
-			*iter += 2
+		if lexer.dat[lexer.iter + 1] == 'x' {
+			lexer.advance()
+			lexer.advance()
 
-			return lex_hex(iter, dat)
+			return lexer.lex_hex()
 		}
 
-		return lex_octal(iter, dat)
+		return lexer.lex_octal()
 	}
 	case ' ', '\t':
-		return no_token()
-	case '\n', '\r':
-		line++
-		char = 0
-		return no_token()
+		return NewToken(TT_NONE, "", lexer.line, lexer.char)
 	default: {
-		if is_numeric(dat[*iter]) {
-			return lex_number(iter, dat)
-		} else if is_alpha(dat[*iter]) {
-			return lex_identifier(iter, dat)
+		if is_numeric(lexer.dat[lexer.iter]) {
+			return lexer.lex_number()
+		} else if is_alpha(lexer.dat[lexer.iter]) {
+			return lexer.lex_identifier()
 		} else {
-			report.Errorf("Invalid character '%c'.\n", dat[*iter])
-			return no_token()
+			report.Errorf("Invalid character '%c'.\n", lexer.dat[lexer.iter])
+			return NewToken(TT_NONE, "", lexer.line, lexer.char)
 		}
 	}
 	}
@@ -578,14 +587,13 @@ func is_hex(r uint8) bool {
 }
 
 func LexStr(code []uint8) []Token {
-	var i int = 0
-
 	var tokens []Token
 
-	for i < len(code) {
-		tokens = append(tokens, lex_character(&i, code))
-		i++
-		char++
+	var lexer Lexer = NewLexer(code)
+
+	for !lexer.is_at_end() {
+		tokens = append(tokens, lexer.lex_character())
+		lexer.advance()
 	}
 
 	return Filter(tokens, func (a Token) bool {
