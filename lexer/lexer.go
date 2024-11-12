@@ -153,57 +153,70 @@ type Token struct {
 	Char int
 }
 
-func notoken() Token {
-	return Token {Typ: TT_NONE, Lexeme: ""}
+func NewToken(typ TokenType, lexeme string, line int, char int) Token {
+	return Token {
+		Typ: typ,
+		Lexeme: lexeme,
+		Line: line,
+		Char: char,
+	}
 }
 
-var line int = 1
-var char int = 0
+type Lexer struct {
+	line int
+	char int
+	iter int
+	dat []byte
+}
 
-func lex_string(iter *int, dat []byte) Token {
-	*iter++
+func (lexer *Lexer) advance() {
+	lexer.iter++
+	lexer.char++
+
+	if lexer.is_at_end() {
+		return
+	}
+
+	if lexer.dat[lexer.iter] == '\n' {
+		lexer.line++
+		lexer.char = 0
+	}
+}
+
+func (lexer *Lexer) is_at_end() bool {
+	return lexer.iter == len(lexer.dat)
+}
+
+func (lexer *Lexer) lex_string() Token {
+	lexer.advance()
 
 	var token Token
 
-	token.Typ = TT_STR;
-	token.Char = char;
-	token.Line = line;
+	token.Typ = TT_STR
+	token.Char = lexer.char
+	token.Line = lexer.line
 
-	for dat[*iter] != '"' {
-		if is_at_end(*iter + 1, dat) {
-			report.Errorf("In Lexer :: Unterminated string at line %d", line)
+	for lexer.dat[lexer.iter] != '"' {
+		if lexer.is_at_end() {
+			report.Errorf("In Lexer :: Unterminated string at line %d", lexer.line)
 			break
 		}
 
-		token.Lexeme += string(dat[*iter])
-		char++;
-		if (dat[*iter] == '\n') {
-			line++;
-			char = 0;
-		}
+		token.Lexeme += string(lexer.dat[lexer.iter])
 
-		*iter++;
+		lexer.advance()
 	}
 
 	return token;
 }
 
-func lex_identifier(iter *int, dat []byte) Token {
-	var token Token
+func (lexer *Lexer) lex_identifier() Token {
+	var token Token = NewToken(TT_IDENTIFIER, "", lexer.line, lexer.char)
 
-	token.Char = char;
-	token.Line = line;
-
-	for is_alpha(rune(dat[*iter])) && !is_at_end(*iter, dat) {
-		token.Lexeme += string(dat[*iter]);
-		*iter++;
-		char++;
+	for is_alpha(lexer.dat[lexer.iter]) && !lexer.is_at_end() {
+		token.Lexeme += string(lexer.dat[lexer.iter]);
+		lexer.advance()
 	}
-
-	token.Typ = TT_IDENTIFIER;
-
-	*iter--
-	char--
 
 	switch token.Lexeme {
 	case "int":
@@ -554,38 +567,34 @@ func lex_character(iter *int, dat []byte) Token {
 		return lex_octal(iter, dat)
 	}
 	case ' ', '\t':
-		return notoken()
+		return no_token()
 	case '\n', '\r':
 		line++
 		char = 0
-		return notoken()
+		return no_token()
 	default: {
-		if is_numeric(rune(dat[*iter])) {
+		if is_numeric(dat[*iter]) {
 			return lex_number(iter, dat)
-		} else if is_alpha(rune(dat[*iter])) {
+		} else if is_alpha(dat[*iter]) {
 			return lex_identifier(iter, dat)
 		} else {
 			report.Errorf("Invalid character '%c'.\n", dat[*iter])
-			return notoken()
+			return no_token()
 		}
 	}
 	}
 }
 
-func is_numeric(r rune) bool {
+func is_numeric(r uint8) bool {
 	return (r >= '0' && r <= '9')
 }
 
-func is_alpha(r rune) bool {
+func is_alpha(r uint8) bool {
 	return (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || r == '_'
 }
 
-func is_hex(r rune) bool {
+func is_hex(r uint8) bool {
 	return is_numeric(r) || (r >= 'A' && r <= 'F') || (r >= 'a' && r <= 'f')
-}
-
-func is_at_end(iter int, dat []byte) bool {
-	return iter == len(dat)
 }
 
 func LexStr(code []uint8) []Token {
