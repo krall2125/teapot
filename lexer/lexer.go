@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"teapot/report"
+	"teapot/utils"
 )
 
 type TokenType int
@@ -535,10 +536,10 @@ func (lexer *Lexer) lex_character() Token {
 		}
 
 		switch lexer.dat[lexer.iter + 1] {
-			case '=': {
-				lexer.advance()
-				return NewToken(TT_LESS_EQ, "", lexer.line, lexer.char - 1)
-			}
+		case '=': {
+			lexer.advance()
+			return NewToken(TT_LESS_EQ, "", lexer.line, lexer.char - 1)
+		}
 		default:
 			return NewToken(TT_LESS, "", lexer.line, lexer.char)
 		}
@@ -596,7 +597,7 @@ func LexStr(code []uint8) []Token {
 		lexer.advance()
 	}
 
-	return Filter(tokens, func (a Token) bool {
+	return utils.Filter(tokens, func (a Token) bool {
 		return a.Typ != TT_NONE
 	})
 }
@@ -610,14 +611,4 @@ func LexFile(file string) []Token {
 	}
 
 	return LexStr(dat);
-}
-
-func Filter[E any](s []E, f func(E) bool) []E {
-	s2 := make([]E, 0, len(s))
-	for _, e := range s {
-		if f(e) {
-			 s2 = append(s2, e)
-		}
-	}
-	return s2
 }
