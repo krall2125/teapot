@@ -12,6 +12,14 @@ func TestLexerBatch(t *testing.T) {
 	code := `int string any anytype bool char const float64 float32 void return
 		 asdfghjkl ()[]{}"maybe mayb e"123456 0x1a3b4f 07753 3.456;+-*/%
 		 &|~^ ==!=>< >=<= &&||! = += -= *= /=%= &=|= ~=^= ++ --`;
-	
-	t.Logf("%v\n", lexer.LexStr([]uint8(code)))
+
+	tokens := lexer.LexStr([]uint8(code))
+
+	for i := range len(tokens) {
+		t.Logf("%s '%s' %d %d\n",
+			lexer.TT_ToStr(tokens[i].Typ),
+			tokens[i].Lexeme,
+			tokens[i].Line,
+			tokens[i].Char)
+	}
 }
